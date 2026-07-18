@@ -6,11 +6,15 @@ __pycache__/
 .venv/
 
 # Node
-node_modules/
+# 末尾スラッシュを付けない: Nix build への symlink（実体はディレクトリでない）も無視するため
+node_modules
 dist/
 coverage/
 .vite/
 *.tsbuildinfo
+# tsc -b（composite プロジェクト）が vite.config.ts から生成する成果物
+web/vite.config.js
+web/vite.config.d.ts
 
 # Nix
 result

@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-web:
+    runs-on: ubuntu-latest
+    # Nix store キャッシュミス時は node_modules（importNpmLock build）の構築に数分かかるため余裕を持たせる
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          # 読み取り専用ジョブのため checkout の認証情報をディスクに残さない（サプライチェーン保護）
+          persist-credentials: false
+
+      # dev と CI のビルド経路を Nix devshell へ一致させる。
+      # Node.js も node_modules（importNpmLock build）もすべて devshell が提供する
+      # （setup-node / npm ci は使わない）。
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          # flake inputs（nixpkgs / uv2nix 等）の GitHub 取得でレート制限に当たらないようにする
+          github_access_token: ${{ github.token }}
+
+      - name: Cache Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-devshell-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'backend/pyproject.toml', 'backend/uv.lock', 'web/package.json', 'web/package-lock.json') }}
+          restore-prefixes-first-match: nix-devshell-${{ runner.os }}-
+
+      - name: Build devshell (node_modules 込み)
+        run: nix develop --command true
+
+      - name: バージョン確認
+        run: nix develop --command bash -c "node --version && npm --version"
+
+      # package-lock.json が package.json と drift していたら fail する
+      # （importNpmLock は package-lock.json を正として build するため）。
+      - name: package-lock.json の drift 検証
+        run: |
+          nix develop --command bash -c "cd web && npm install --package-lock-only"
+          git diff --exit-code web/package-lock.json
+
+      # コマンドの正本は Makefile（ローカルと CI の drift 防止）
+      - name: Lint web
+        run: make lint-web
+
+      - name: Format check
+        run: make format-check
+
+      - name: Run web tests
+        run: make test-web
+
+      - name: Build web
+        run: make build-web
+
+  test-backend:
+    runs-on: ubuntu-latest
+    # Nix store キャッシュミス時は devshell（uv2nix build）の構築に数分かかるため余裕を持たせる
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          # 読み取り専用ジョブのため checkout の認証情報をディスクに残さない（サプライチェーン保護）
+          persist-credentials: false
+
+      # dev と CI のビルド経路を Nix devshell（uv2nix build）へ一致させる。
+      # Python 3.13・依存パッケージはすべて devshell が提供する。
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          # flake inputs（nixpkgs / uv2nix 等）の GitHub 取得でレート制限に当たらないようにする
+          github_access_token: ${{ github.token }}
+
+      # devshell の closure（uv2nix build の Python 環境込み）を GitHub Actions cache に保存する。
+      # キーは flake と uv.lock のハッシュ。ミス時は restore-prefixes-first-match で旧キャッシュから
+      # 差分ビルドする。
+      - name: Cache Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-devshell-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'backend/pyproject.toml', 'backend/uv.lock', 'web/package.json', 'web/package-lock.json') }}
+          restore-prefixes-first-match: nix-devshell-${{ runner.os }}-
+
+      - name: Build devshell (uv2nix)
+        run: nix develop --command true
+
+      # uv.lock が pyproject.toml と drift していたら fail する。
+      # uv2nix は uv.lock を正として build するため、drift の検知はこのステップが担う。
+      - name: uv.lock の drift 検証
+        run: nix develop --command bash -c "cd backend && uv lock --check"
+
+      - name: バージョン確認
+        run: nix develop --command bash -c "python3 --version && uv --version && ruff --version"
+
+      # コマンドの正本は Makefile（ローカルと CI の drift 防止）
+      - name: Lint backend
+        run: make lint-backend
+
+      - name: Typecheck backend
+        run: make typecheck-backend
+
+      - name: Run backend tests
+        run: make test-backend
