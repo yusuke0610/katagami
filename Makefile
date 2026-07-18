@@ -59,8 +59,9 @@ install-backend:
 install-web:
 	nix develop --command bash -c "ls web/node_modules > /dev/null && echo 'web 依存は Nix build が提供します（npm install 不要）'"
 
+# node_modules（read-only symlink）を npm に触らせないため一時ディレクトリで lock を解決する
 lock-web:
-	nix develop --command bash -c "cd web && npm install --package-lock-only"
+	nix develop --command bash scripts/npm-lock.sh
 
 # ------------------------------------------------------------------ #
 # ローカル開発

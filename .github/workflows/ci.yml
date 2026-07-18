@@ -51,9 +51,10 @@ jobs:
 
       # package-lock.json が package.json と drift していたら fail する
       # （importNpmLock は package-lock.json を正として build するため）。
+      # コマンドの正本は scripts/npm-lock.sh（make lock-web と共通）
       - name: package-lock.json の drift 検証
         run: |
-          nix develop --command bash -c "cd web && npm install --package-lock-only"
+          nix develop --command bash scripts/npm-lock.sh
           git diff --exit-code web/package-lock.json
 
       # コマンドの正本は Makefile（ローカルと CI の drift 防止）
