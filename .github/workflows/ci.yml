@@ -82,6 +82,12 @@ jobs:
           # 読み取り専用ジョブのため checkout の認証情報をディスクに残さない（サプライチェーン保護）
           persist-credentials: false
 
+      # ADR 索引（docs/adr/README.md）↔ ADR ファイルの drift 検知。
+      # bash/grep/comm のみに依存するため nix 非経由で直接実行し、
+      # 重い devshell 構築の前に置いて fail-fast にする。
+      - name: Lint SSoT (ADR index)
+        run: make lint-adr-index
+
       # dev と CI のビルド経路を Nix devshell（uv2nix build）へ一致させる。
       # Python 3.13・依存パッケージはすべて devshell が提供する。
       - name: Install Nix
