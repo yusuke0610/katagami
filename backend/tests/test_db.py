@@ -37,10 +37,16 @@ def test_alembic_upgrade_head_applies_baseline() -> None:
         )
         assert result.returncode == 0, result.stderr
 
-        # 適用済みリビジョンが baseline であることを実 DB で確認する
+        # 適用済みリビジョンがスクリプトの head と一致することを実 DB で確認する
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
         from sqlalchemy import create_engine
+
+        config = Config(str(_BACKEND_DIR / "alembic.ini"))
+        config.set_main_option("script_location", str(_BACKEND_DIR / "alembic_migrations"))
+        head = ScriptDirectory.from_config(config).get_current_head()
 
         engine = create_engine(f"sqlite:///{db_path}")
         with engine.connect() as connection:
             version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
-        assert version == "0001_baseline"
+        assert version == head
