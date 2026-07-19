@@ -1,0 +1,6 @@
+# cp terraform.tfvars.example terraform.tfvars して値を埋める。
+# terraform.tfvars は gitignore 対象（プロジェクト ID 等の実値を置く）。
+environment  = "stg"
+project_id   = "your-project-stg"
+cors_origins = "https://your-app.example.com"
+# deployer_service_account_email = "deployer@your-project-stg.iam.gserviceaccount.com"

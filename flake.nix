@@ -80,6 +80,9 @@
             # node_modules の実体は webNodeModules（Nix build）が提供する
             nodejs
 
+            # --- IaC ---
+            opentofu           # OpenTofu CLI（Terraform 互換 / インフラ管理）
+
             # --- 共通ツール ---
             git
             gh                 # GitHub CLI

@@ -29,6 +29,13 @@ web/vite.config.d.ts
 # コミット対象の生成物は web/src/api/generated.ts のみ）
 backend/openapi.json
 
+# OpenTofu / Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+# 実値（プロジェクト ID 等）は terraform.tfvars に置きコミットしない（.example のみ許可）
+terraform.tfvars
+
 # Nix
 result
 result-*
