@@ -54,6 +54,7 @@ Claude Code の sandbox は `~/.cache/nix/fetcher-locks/*.lock` への書き込�
 
 - **コメント・ドキュメント**: コード内コメント・docstring・JSDoc はすべて**日本語**で記述する。
 - **エラーメッセージ**: HTTPException の `detail` 等、ユーザーに返すメッセージはすべて**日本語**。
+- **エラー契約**: API エラーは必ず `AppErrorResponse` の共通形（`code` / `message` / `action` / `error_id`）で返す。backend は `raise_app_error()`（`app/core/errors.py`）を使い、素の文字列 detail を増やさない。エラーコードの集合は FE（`web/src/constants/errorCodes.ts`）と `make lint-env-keys` で同期される。追加手順は `errors.py:ErrorCode` の docstring を参照。
 - **例外の握りつぶし禁止**: `except SomeException: pass` は禁止。最低でも `logger.debug/warning/error` でログを残す。補助処理で抑制する場合も `logger.warning` でログを出すこと。
 - **過剰な抽象化を避ける**: PEP8 を守るな、PEP8 を理解した上で抽象化しろ。
 

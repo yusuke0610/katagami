@@ -31,7 +31,7 @@ help:
 	@echo "  lint-backend      Backend: ruff check"
 	@echo "  typecheck-backend Backend: pyright 型チェック"
 	@echo "  lint-web          Frontend: eslint"
-	@echo "  lint-env-keys     env名の SSoT drift を検知 (env_keys.py↔.env.example 双方向, リテラル参照禁止)"
+	@echo "  lint-env-keys     env名/エラーコードの SSoT drift を検知 (env_keys.py↔.env.example, リテラル参照禁止, errors.py↔errorCodes.ts)"
 	@echo "  lint-adr-index    ADR 索引の drift を検知 (docs/adr/README.md↔ADR ファイル)"
 	@echo "  lint-fix          リント自動修正 (ruff + eslint)"
 	@echo "  format            Prettier で整形"
@@ -104,7 +104,8 @@ typecheck-backend:
 lint-web:
 	nix develop --command bash -c "cd web && npm run lint"
 
-# env 名の SSoT drift を検知（env_keys.py↔.env.example 双方向 + リテラル参照禁止）。
+# env 名 / エラーコードの SSoT drift を検知
+# （env_keys.py↔.env.example 双方向 + リテラル参照禁止 + errors.py↔errorCodes.ts）。
 # grep/sed/comm のみに依存するため nix wrap 不要。
 lint-env-keys:
 	bash scripts/lint-env-keys.sh
