@@ -28,6 +28,7 @@ Makefile は `nix develop --command bash -c "..."` でラップ済み。AI は�
 | TDD 随伴検知 | `make lint-tdd` （`make lint` に含まれる） |
 | web 依存 lock 更新 | `make lock-web` （package.json 変更後に必須） |
 | マイグレーション | `make migrate` / `make migrate-create MSG="..."` |
+| インフラ validate | `make infra-validate` （fmt は `make infra-fmt`） |
 | コード重複検知 | `make dupe-check` （結果: `report/dupe/`。warn-only） |
 | ミューテーションテスト | `make mutation-backend` / `make mutation-web` （**長時間**。週次 CI で実行） |
 

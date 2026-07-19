@@ -10,8 +10,10 @@
 #   (1) env 名（正方向）: backend/app/core/env_keys.py の定数値（= 実 env 名）が
 #       .env.example にすべて存在するか（ALLOWLIST で内部フラグ等を除外）。
 #       rename / 追加時の同期忘れを CI で止める。
-#   (2) env 名（逆方向）: .env.example に書かれた env 名がすべて env_keys.py に
-#       存在するか。rename / 削除時に旧名が残留する drift と typo を検知する。
+#   (2) env 名（逆方向）: .env.example / infra/modules/cloud_run/main.tf に書かれた
+#       env 名がすべて env_keys.py に存在するか。rename / 削除時に旧名が残留する
+#       drift と typo を検知する。本番注入経路（cloud_run）は環境変数ごとに注入要否が
+#       異なるため、正方向（すべて注入されているか）は検証できず逆方向のみ検証する。
 #   (3) リテラル参照禁止: backend/app が os.getenv("XXX") / os.environ["XXX"] /
 #       os.environ.get("XXX") の文字列リテラルで env を参照していないか
 #       （env_keys 定数経由を機械強制する）。
@@ -21,7 +23,7 @@
 #       BE が新コードを追加して FE 未反映の drift は型エラーにならない。それを補う。
 #
 # 将来の拡張（対応する縦串の導入時に追加する）:
-#   - docker-compose.yml / IaC（cloud_run 等）の env block との突合
+#   - docker-compose.yml の env block との突合
 #
 # 正本:
 #   - env 名:       backend/app/core/env_keys.py
@@ -32,6 +34,7 @@ cd "$(dirname "$0")/.."
 
 ENV_KEYS="backend/app/core/env_keys.py"
 ENV_EXAMPLE=".env.example"
+CLOUD_RUN_TF="infra/modules/cloud_run/main.tf"
 ERRORS_PY="backend/app/core/errors.py"
 ERROR_CODES_TS="web/src/constants/errorCodes.ts"
 
@@ -70,14 +73,32 @@ if [ -n "$missing_in_example" ]; then
   fail=1
 fi
 
-# ── (2) 逆方向: .env.example の env 名 ⊆ env_keys.py ───────────────────────
-unknown_in_example=$(comm -23 <(printf '%s\n' "$example_names") <(printf '%s\n' "$env_names"))
+# ── (2) 逆方向: downstream の env 名 ⊆ env_keys.py ─────────────────────────
+# cloud_run の env 名は 2 形式から取る:
+#   - 静的 env block:        name  = "XXX"
+#   - secret env の locals:  XXX = "secret-name"（dynamic env の name は locals キーが正本）
+cloud_run_names=$({
+  grep -E 'name[[:space:]]+=[[:space:]]+"[A-Z_]+"' "$CLOUD_RUN_TF" \
+    | sed -E 's/.*"([A-Z_]+)".*/\1/'
+  grep -E '^[[:space:]]*[A-Z_]+[[:space:]]*=[[:space:]]*"' "$CLOUD_RUN_TF" \
+    | sed -E 's/^[[:space:]]*([A-Z_]+).*/\1/'
+} | sort -u)
 
-if [ -n "$unknown_in_example" ]; then
-  echo "ERROR: $ENV_KEYS に存在しない env 名が $ENV_EXAMPLE に残っています:" >&2
-  printf '  - %s\n' $unknown_in_example >&2
+unknown_in_example=$(comm -23 <(printf '%s\n' "$example_names") <(printf '%s\n' "$env_names"))
+unknown_in_cloud_run=$(comm -23 <(printf '%s\n' "$cloud_run_names") <(printf '%s\n' "$env_names"))
+
+if [ -n "$unknown_in_example" ] || [ -n "$unknown_in_cloud_run" ]; then
+  echo "ERROR: $ENV_KEYS に存在しない env 名が downstream に残っています:" >&2
+  if [ -n "$unknown_in_example" ]; then
+    echo "  $ENV_EXAMPLE:" >&2
+    printf '    - %s\n' $unknown_in_example >&2
+  fi
+  if [ -n "$unknown_in_cloud_run" ]; then
+    echo "  $CLOUD_RUN_TF:" >&2
+    printf '    - %s\n' $unknown_in_cloud_run >&2
+  fi
   echo "" >&2
-  echo "rename / 削除した env 名の旧名残留か typo です。$ENV_EXAMPLE 側を追従してください。" >&2
+  echo "rename / 削除した env 名の旧名残留か typo です。downstream 側を追従してください。" >&2
   echo "" >&2
   fail=1
 fi
@@ -125,4 +146,4 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 
-echo "lint-env-keys: OK（env 名 .env.example・リテラル参照・ErrorCode の SSoT drift なし）"
+echo "lint-env-keys: OK（env 名 .env.example/cloud_run・リテラル参照・ErrorCode の SSoT drift なし）"

@@ -13,6 +13,8 @@
     "tsx",
     "javascript",
     "jsx",
+    "hcl",
+    "terraform",
     "nix",
     "markdown",
     "yaml"
@@ -21,6 +23,8 @@
     "backend/app",
     "backend/tests",
     "web/src",
+    "infra/modules",
+    "infra/environments",
     "docs",
     ".claude",
     "scripts",
@@ -37,7 +41,13 @@
     "web/src/**/*.test.{ts,tsx}",
     "report/**",
     "**/*.lock",
-    "**/*.snap"
+    "**/*.snap",
+    "**/.terraform.lock.hcl",
+    "**/.terraform/**",
+    "**/infra/environments/*/main.tf",
+    "**/infra/environments/*/variables.tf",
+    "**/infra/environments/*/outputs.tf",
+    "**/infra/environments/*/versions.tf"
   ],
   "reporters": ["json", "html", "markdown", "consoleFull"],
   "output": "report/dupe",
