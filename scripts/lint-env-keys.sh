@@ -15,19 +15,25 @@
 #   (3) リテラル参照禁止: backend/app が os.getenv("XXX") / os.environ["XXX"] /
 #       os.environ.get("XXX") の文字列リテラルで env を参照していないか
 #       （env_keys 定数経由を機械強制する）。
+#   (4) エラーコード: backend/app/core/errors.py の ErrorCode 値集合と
+#       web/src/constants/errorCodes.ts の ERROR_CODES が完全一致するか。
+#       FE 側の型検査（Record<ErrorCodeKey,...>）は FE 内で完結するため、
+#       BE が新コードを追加して FE 未反映の drift は型エラーにならない。それを補う。
 #
 # 将来の拡張（対応する縦串の導入時に追加する）:
 #   - docker-compose.yml / IaC（cloud_run 等）の env block との突合
-#   - エラーコード（backend errors.py ↔ web errorCodes.ts）の集合一致
 #
 # 正本:
-#   - env 名: backend/app/core/env_keys.py
+#   - env 名:       backend/app/core/env_keys.py
+#   - エラーコード: backend/app/core/errors.py の ErrorCode
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 ENV_KEYS="backend/app/core/env_keys.py"
 ENV_EXAMPLE=".env.example"
+ERRORS_PY="backend/app/core/errors.py"
+ERROR_CODES_TS="web/src/constants/errorCodes.ts"
 
 # .env.example に載せない env_keys 定数（設定ではなくランタイム内部フラグ等）。
 # 現状は無し。追加する場合は理由をコメントで残すこと。
@@ -90,8 +96,33 @@ if [ -n "$literal_refs" ]; then
   fail=1
 fi
 
+# ── (4) errors.py ErrorCode == errorCodes.ts ERROR_CODES ──────────────────
+be_codes=$(grep -E '^[[:space:]]+[A-Z_]+[[:space:]]*=[[:space:]]*"[A-Z_]+"' "$ERRORS_PY" \
+  | sed -E 's/.*=[[:space:]]*"([A-Z_]+)".*/\1/' | sort -u)
+fe_codes=$(grep -E '^[[:space:]]+"[A-Z_]+",' "$ERROR_CODES_TS" \
+  | sed -E 's/.*"([A-Z_]+)".*/\1/' | sort -u)
+
+be_only=$(comm -23 <(printf '%s\n' "$be_codes") <(printf '%s\n' "$fe_codes"))
+fe_only=$(comm -13 <(printf '%s\n' "$be_codes") <(printf '%s\n' "$fe_codes"))
+
+if [ -n "$be_only" ] || [ -n "$fe_only" ]; then
+  echo "ERROR: ErrorCode の集合が BE と FE で一致しません。" >&2
+  if [ -n "$be_only" ]; then
+    echo "  $ERRORS_PY にあるが $ERROR_CODES_TS に無い:" >&2
+    printf '    - %s\n' $be_only >&2
+  fi
+  if [ -n "$fe_only" ]; then
+    echo "  $ERROR_CODES_TS にあるが $ERRORS_PY に無い:" >&2
+    printf '    - %s\n' $fe_only >&2
+  fi
+  echo "" >&2
+  echo "errors.py の ErrorCode を正本に、errorCodes.ts と errorMessages.ts を追従してください。" >&2
+  echo "" >&2
+  fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 
-echo "lint-env-keys: OK（env 名 .env.example・リテラル参照の SSoT drift なし）"
+echo "lint-env-keys: OK（env 名 .env.example・リテラル参照・ErrorCode の SSoT drift なし）"
