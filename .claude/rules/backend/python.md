@@ -1,0 +1,31 @@
+---
+paths:
+  - backend/**
+---
+
+# Python コーディング規約
+
+- ruff に準拠すること（設定: `backend/pyproject.toml`）
+- PEP8を守るな、PEP8を理解した上で抽象化しろ
+- コード変更後は `make lint-backend` を実行し、違反がないことを確認すること（Nix devshell 経由で ruff が解決される）
+- 特定ファイルだけ検証したい場合は `nix develop --command bash -c "cd backend && ruff check <path>"` を使う（ruff は devshell の Nix build 環境から PATH 解決される）。生シェルで python / ruff を直接叩くのは禁止（backend の Python 環境が PATH に無い）
+- **lint 失敗時は当該ファイルだけ確認する**: `make lint-backend` が他ファイルの I001 等で落ちる場合、自分の変更分は個別 `ruff check <touched_file>` で検証してから進める（既存違反を巻き込まない）
+- 未使用の import を残さないこと（F401）
+
+## 例外処理の必須ルール
+
+- **`except SomeException: pass` は絶対禁止**。例外を握りつぶすと障害調査が不可能になる
+- 最低でも `logger.debug/warning/error` でログを出すこと
+- 補助的な処理（通知生成など）でメインフローへの影響を避けるために例外を抑制する場合も `logger.warning` でログを残すこと
+- 正しいパターン例:
+  ```python
+  # 補助処理で例外を抑制する場合
+  try:
+      _create_notification(...)
+  except Exception:
+      logger.warning("通知作成に失敗 (無視)", exc_info=True)
+  ```
+
+## ネイティブ依存の追加
+
+Python ライブラリがシステムパッケージ（C ライブラリ等）に依存する場合、`flake.nix` の devshell（`devShells.default.packages`）に追加すること。devshell の外（ホスト環境）に依存を置くと、ローカルと CI で挙動が乖離する。
