@@ -40,6 +40,12 @@ else
 fi
 
 if ! git rev-parse --verify --quiet "$BASE_REF" >/dev/null; then
+  # テンプレート生成直後（nix run .#new）など origin 未設定のリポジトリでは
+  # 比較対象の base が存在しないため、エラーではなく skip とする。
+  if ! git remote get-url origin >/dev/null 2>&1; then
+    echo "lint-tdd: SKIP（remote origin 未設定。テンプレート生成直後のリポジトリ等）"
+    exit 0
+  fi
   echo "ERROR: base ref '$BASE_REF' を解決できません。'git fetch origin main' を実行してください。" >&2
   echo "（CI の場合は checkout の fetch-depth: 0 を確認すること）" >&2
   exit 1

@@ -175,6 +175,54 @@ jobs:
             exit 1
           fi
 
+  # テンプレート生成のスモーク（ADR-0002）。
+  # nix run .#new で実際に生成し、置換漏れゼロ・devshell 構築・SSoT lint・テストが
+  # 生成直後のリポジトリで通ることを検証する（生成物の劣化を CI で検知）。
+  template-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          github_access_token: ${{ github.token }}
+
+      - name: Cache Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-devshell-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'backend/pyproject.toml', 'backend/uv.lock', 'web/package.json', 'web/package-lock.json') }}
+          restore-prefixes-first-match: nix-devshell-${{ runner.os }}-
+
+      - name: Generate project from template
+        run: nix run .#new -- smoke-sample "$RUNNER_TEMP/smoke-sample"
+
+      - name: Verify no template token remains
+        run: |
+          if grep -rIq --exclude-dir=.git "katagami" "$RUNNER_TEMP/smoke-sample"; then
+            echo "::error::生成物に置換漏れがあります"
+            grep -rIl --exclude-dir=.git "katagami" "$RUNNER_TEMP/smoke-sample"
+            exit 1
+          fi
+
+      - name: Build generated devshell
+        working-directory: ${{ runner.temp }}/smoke-sample
+        run: nix develop --command true
+
+      # 生成直後のリポジトリで SSoT lint（lint-tdd は origin 未設定 skip の経路）と
+      # backend / web テストが通ることを確認する
+      - name: Run gates in generated project
+        working-directory: ${{ runner.temp }}/smoke-sample
+        run: |
+          make lint-env-keys lint-adr-index lint-tdd
+          make test-backend
+          make test-web
+
   # コード重複検知（jscpd）。導入初期は warn-only（threshold=100 / continue-on-error）。
   # baseline 取得後に閾値を絞り fail 化する予定。
   detect-duplication:

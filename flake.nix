@@ -59,11 +59,29 @@
           npmRoot = ./web;
           inherit nodejs;
         };
+        # --- テンプレート生成 CLI（ADR-0002） ---
+        # `nix run .#new -- <app名>` でこのリポジトリをテンプレートとして新プロジェクトを
+        # 生成する。テンプレートの実体は self（= このリポジトリの git 管理ファイル一式）で、
+        # 生成ロジックは scripts/new-project.sh が正本。
+        newProject = pkgs.writeShellApplication {
+          name = "katagami-new";
+          runtimeInputs = with pkgs; [ git gnused gnutar gnugrep findutils coreutils ];
+          text = ''
+            export KATAGAMI_TEMPLATE_ROOT=${self}
+            exec bash ${self}/scripts/new-project.sh "$@"
+          '';
+        };
       in
       {
         packages = {
           backend-env = backendEnv;
           web-node-modules = webNodeModules;
+          new-project = newProject;
+        };
+
+        apps.new = {
+          type = "app";
+          program = "${newProject}/bin/katagami-new";
         };
 
         devShells.default = pkgs.mkShell {
