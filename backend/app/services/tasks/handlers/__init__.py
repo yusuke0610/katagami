@@ -26,3 +26,10 @@ def register_handler(task_type: str) -> Callable[[type[TaskHandler]], type[TaskH
 def get_handler(task_type: str) -> TaskHandler | None:
     """タスク種別に対応するハンドラを返す（未登録なら None）。"""
     return _registry.get(task_type)
+
+
+# --- ハンドラモジュールの登録 ---
+# ここで import することで @register_handler が実行され、レジストリに載る。
+# 新しいハンドラを追加したら必ずここに import を足すこと
+# （レジストリ経由の import 循環を避けるため末尾に置く）。
+from app.services.tasks.handlers import note_summarize  # noqa: E402, F401

@@ -8,15 +8,12 @@ import asyncio
 from collections.abc import Coroutine
 from typing import Any
 
-from app.db import Base, SessionLocal, engine
+from app.db import SessionLocal
 from app.models.task import AsyncTask
 from app.services.tasks.exceptions import NonRetryableError
 from app.services.tasks.handlers import register_handler
 from app.services.tasks.handlers.base import SessionFactory, TaskHandler
 from app.services.tasks.worker import execute_task
-
-# テスト用テーブルを作成する（スキーマの正本は alembic だが、テストでは create_all 可）
-Base.metadata.create_all(bind=engine)
 
 
 @register_handler("test_ok")
