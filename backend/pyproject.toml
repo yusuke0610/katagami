@@ -18,6 +18,8 @@ dependencies = [
     # TestClient (starlette) が要求
     "httpx==0.28.1",
     "ruff==0.15.21",
+    # ミューテーションテスト（週次 CI: .github/workflows/mutation.yml）
+    "mutmut==3.6.0",
 ]
 
 [tool.uv]
@@ -31,6 +33,20 @@ pythonpath = ["."]
 # --cov は Makefile / CI 側の pytest 呼び出しで付与する（mutation テスト導入時の干渉回避）
 addopts = "-p no:cacheprovider"
 testpaths = ["tests"]
+
+# ミューテーションテスト（週次 CI: .github/workflows/mutation.yml）
+# 対象は高価値な決定論的ビジネスロジックに限定する。source_paths の app 全体は
+# mutants/ へコピーされる（import 解決のため）が、変異を加えるのは only_mutate の
+# グロブ（fnmatch。"*" は "/" にもマッチ）に一致するファイルのみ。
+# schemas / models / ルーター定義・宣言層は対象外（テストで殺せないミュータントが
+# ノイズになるため）。本設定の only_mutate は TDD 対象スコープの正本でもある
+# （scripts/lint-tdd.sh が参照）。
+[tool.mutmut]
+source_paths = ["app"]
+only_mutate = [
+    "app/core/errors.py",              # エラー正規化・コード推定
+    "app/services/tasks/worker.py",    # タスク状態遷移
+]
 
 [tool.ruff]
 line-length = 100

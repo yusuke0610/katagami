@@ -1,8 +1,9 @@
 .PHONY: help \
 	setup install-backend install-web lock-web \
 	dev-backend dev-web \
-	test test-backend test-web \
-	lint lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index lint-fix \
+	test test-backend test-web mutation-backend mutation-web \
+	lint lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index lint-tdd lint-fix \
+	dupe-check dupe-check-html dupe-clean \
 	format format-check \
 	ci \
 	build-web codegen-types \
@@ -34,6 +35,14 @@ help:
 	@echo "  lint-web          Frontend: eslint"
 	@echo "  lint-env-keys     env名/エラーコードの SSoT drift を検知 (env_keys.py↔.env.example, リテラル参照禁止, errors.py↔errorCodes.ts)"
 	@echo "  lint-adr-index    ADR 索引の drift を検知 (docs/adr/README.md↔ADR ファイル)"
+	@echo "  lint-tdd          TDD 対象 (mutation スコープ) の実装変更にテスト差分が随伴しているか検知"
+	@echo "  mutation-backend  Backend: mutmut (長時間。週次 CI で実行)"
+	@echo "  mutation-web      Frontend: Stryker (長時間。レポート: web/reports/mutation/)"
+	@echo ""
+	@echo "コード重複検知 (jscpd)"
+	@echo "  dupe-check        重複検知を実行し report/dupe/ に JSON/HTML/Markdown を出力"
+	@echo "  dupe-check-html   同上 (HTML レポート出力後にパスを表示)"
+	@echo "  dupe-clean        report/dupe/ を削除"
 	@echo "  lint-fix          リント自動修正 (ruff + eslint)"
 	@echo "  format            Prettier で整形"
 	@echo "  format-check      Prettier チェック"
@@ -96,7 +105,7 @@ test-backend:
 test-web:
 	nix develop --command bash -c "cd web && npm test"
 
-lint: lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index
+lint: lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index lint-tdd
 
 lint-backend:
 	nix develop --command bash -c "cd backend && ruff check app tests alembic_migrations"
@@ -122,6 +131,21 @@ lint-env-keys:
 lint-adr-index:
 	bash scripts/lint-adr-index.sh
 
+# TDD 対象（mutation スコープの決定論的ロジック層）の実装変更にテスト差分が
+# 随伴しているかを検知。対象 glob は mutation 設定から動的に読み出す。
+# bash/git/awk/sed のみに依存するため nix wrap 不要。
+lint-tdd:
+	bash scripts/lint-tdd.sh
+
+# ミューテーションテスト。フル実行は長時間かかるため通常 CI には含めず、
+# 週次の .github/workflows/mutation.yml で実行する。対象は pyproject [tool.mutmut] /
+# web/stryker.conf.json を参照。
+mutation-backend:
+	nix develop --command bash -c "cd backend && python -m mutmut run"
+
+mutation-web:
+	nix develop --command bash -c "cd web && npm run test:mutation"
+
 lint-fix:
 	nix develop --command bash -c "cd backend && ruff check --fix app tests alembic_migrations"
 	nix develop --command bash -c "cd web && npm run lint:fix"
@@ -131,6 +155,22 @@ format:
 
 format-check:
 	nix develop --command bash -c "cd web && npm run format:check"
+
+# ------------------------------------------------------------------ #
+# コード重複検知 (jscpd)
+# ------------------------------------------------------------------ #
+
+# jscpd は npx 経由で実行する（devshell の nodejs を利用）。
+# 設定は .jscpd.json、出力は report/dupe/。導入初期は warn-only（threshold=100）。
+dupe-check:
+	nix develop --command bash -c "mkdir -p report/dupe && npx --yes jscpd@4 --config .jscpd.json"
+
+dupe-check-html:
+	nix develop --command bash -c "mkdir -p report/dupe && npx --yes jscpd@4 --config .jscpd.json"
+	@echo "HTML レポート: report/dupe/html/index.html"
+
+dupe-clean:
+	rm -rf report/dupe
 
 # ------------------------------------------------------------------ #
 # ビルド
