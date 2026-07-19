@@ -33,10 +33,24 @@ SaaS 開発の規律を機械検証で守る「縦串」テンプレートリフ
 | `Makefile` | タスクランナー。`make help` で一覧 |
 | `.github/workflows/` | CI（lint + typecheck + test + build + codegen/lock drift + jscpd + OpenTofu + 週次 mutation） |
 
-## クイックスタート
+## 新プロジェクトの生成（テンプレートとして使う）
 
 ```bash
-# 前提: Nix（flakes 有効）
+# 前提: Nix（flakes 有効）。インストール不要（ADR-0002）
+nix run github:yusuke0610/katagami#new -- my-app
+
+cd my-app
+nix develop        # 開発環境に入る（初回は依存の Nix build が走る）
+make ci            # 全ゲートが green であることを確認
+```
+
+テンプレート内のアプリ名（`katagami`）がファイル内容・ファイル名とも一括で `my-app` に
+置換され、git 初期化・初期コミットまで行われる。lock ファイル内の名前も置換されるため、
+生成直後から CI の lock drift 検証が green になる。
+
+## 開発（このリポジトリ自体）
+
+```bash
 nix develop        # 開発環境に入る
 make setup         # 初回セットアップ
 make ci            # lint + format-check + test + build を一括実行（CI 相当）
