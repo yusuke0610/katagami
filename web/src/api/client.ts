@@ -20,10 +20,24 @@ async function parseJsonSafely(response: Response): Promise<unknown> {
   }
 }
 
-export async function fetchHealth(baseUrl = ""): Promise<HealthResponse> {
-  const response = await fetch(`${baseUrl}/health`);
+/**
+ * JSON API への共通リクエスト。エラー応答は ApiError（AppErrorResponse 契約）として投げる。
+ * 型引数 T は generated.ts のレスポンス型を渡す（手書き型の二重定義をしない）。
+ */
+export async function requestJson<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(path, init);
   if (!response.ok) {
     throw apiErrorFromResponseBody(await parseJsonSafely(response));
   }
-  return (await response.json()) as HealthResponse;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return (await response.json()) as T;
+}
+
+export async function fetchHealth(baseUrl = ""): Promise<HealthResponse> {
+  return requestJson<HealthResponse>(`${baseUrl}/health`);
 }

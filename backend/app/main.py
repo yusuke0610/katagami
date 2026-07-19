@@ -13,6 +13,7 @@ from app.core.errors import (
     generate_error_id,
     normalize_http_exception_detail,
 )
+from app.routers import notes, tasks
 from app.schemas.health import HealthResponse
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,10 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
             error_id=error_id,
         ).model_dump(exclude_none=True),
     )
+
+
+app.include_router(notes.router)
+app.include_router(tasks.router)
 
 
 @app.get("/health")

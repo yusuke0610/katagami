@@ -46,6 +46,7 @@ source_paths = ["app"]
 only_mutate = [
     "app/core/errors.py",              # エラー正規化・コード推定
     "app/services/tasks/worker.py",    # タスク状態遷移
+    "app/services/notes/summarizer.py", # サンプルドメインの決定論的サマリ生成
 ]
 
 [tool.ruff]
