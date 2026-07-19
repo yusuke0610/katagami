@@ -75,8 +75,12 @@ make ci
 
 | 正本（変更したら） | 再生成コマンド | コミットすべき生成物 | CI の drift 検証 |
 |---|---|---|---|
+| backend の OpenAPI スキーマ（`app/schemas/` の Pydantic、ルーターのシグネチャ・query/path パラメータ・**endpoint/schema の docstring**） | `make codegen-types` | `web/src/api/generated.ts`（`backend/openapi.json` は gitignore で対象外） | `codegen-drift` |
 | `backend/pyproject.toml` の `[project.dependencies]` | `nix develop --command bash -c "cd backend && uv lock"` | `backend/uv.lock` | `test-backend` の `uv lock --check` |
 | `web/package.json` の dependencies | `make lock-web` | `web/package-lock.json` | `test-web` の drift 検証（scripts/npm-lock.sh） |
+
+- **判定基準**: 「OpenAPI スペックに出るものを変えたか」。エンドポイントの追加・削除、リクエスト/レスポンス型の変更はもちろん、**docstring の文言変更だけでも description として spec に反映される**ため再生成が要る。
+- backend の `app/schemas/` / ルーターを触ったら、`make ci` 前に `make codegen-types` を回して `git diff web/src/api/generated.ts` を確認する。差分が出たら必ず同じ PR でコミットする。
 
 新しい SSoT→生成物の系統を追加した場合は、本表に行を足して再発防止の対象に含める。
 

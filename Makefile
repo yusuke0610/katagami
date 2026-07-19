@@ -5,7 +5,7 @@
 	lint lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index lint-fix \
 	format format-check \
 	ci \
-	build-web \
+	build-web codegen-types \
 	clean
 
 # デフォルトターゲット: ヘルプ表示
@@ -39,6 +39,7 @@ help:
 	@echo ""
 	@echo "ビルド"
 	@echo "  build-web         Vite ビルド"
+	@echo "  codegen-types     OpenAPI から web 型 (src/api/generated.ts) を再生成"
 	@echo ""
 	@echo "クリーンアップ"
 	@echo "  clean             キャッシュ削除"
@@ -132,6 +133,14 @@ format-check:
 
 build-web:
 	nix develop --command bash -c "cd web && npm run build"
+
+# backend の FastAPI OpenAPI スキーマから web の型定義を生成する（型契約）。
+# export_openapi.py で backend/openapi.json（gitignore 対象の中間生成物）を出力し、
+# gen-types.mjs で web/src/api/generated.ts（コミット対象）を再生成する。
+# 正本（app/schemas/ の Pydantic・ルーター定義）を変えたら必ず実行してコミットする
+# （CI の codegen-drift ジョブが drift を検証する）。
+codegen-types:
+	nix develop --command bash -c "set -e; cd backend && python scripts/export_openapi.py && cd ../web && node scripts/gen-types.mjs"
 
 # ------------------------------------------------------------------ #
 # クリーンアップ
