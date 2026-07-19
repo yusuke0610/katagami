@@ -22,6 +22,7 @@ Makefile は `nix develop --command bash -c "..."` でラップ済み。AI は�
 | Frontend lint | `make lint-web` |
 | Frontend test | `make test-web` |
 | Lint 自動修正 | `make lint-fix` |
+| env 名 drift 検知 | `make lint-env-keys` （`make lint` に含まれる） |
 | ADR 索引 drift 検知 | `make lint-adr-index` （`make lint` に含まれる） |
 | web 依存 lock 更新 | `make lock-web` （package.json 変更後に必須） |
 
@@ -113,6 +114,14 @@ CI 定義: `.github/workflows/ci.yml`
 - **依存 / 環境変数の追加**: 新パッケージ、env var 追加
 - **大量自動生成差分**: lockfile など、レビュー対象外として切り分けたいもの
 - **未完 / TODO**: 一部を後回しにした場合
+
+## 環境変数
+
+**正本**:
+- 環境変数名の定数定義: `backend/app/core/env_keys.py`
+- ローカル開発のテンプレート: `.env.example`
+
+backend 内で `os.getenv("XXX")` のように文字列リテラル直接参照は禁止。`from app.core import env_keys` した上で `os.getenv(env_keys.XXX)` を使う。新規環境変数を追加するときは env_keys.py の docstring に記載の手順（`.env.example` 等への同期）を必ず実行する。drift は `make lint-env-keys`（CI 含む）が機械検証する。
 
 ## ADR（Architecture Decision Record）
 
