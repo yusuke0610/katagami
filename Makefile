@@ -6,6 +6,7 @@
 	format format-check \
 	ci \
 	build-web codegen-types \
+	migrate migrate-create \
 	clean
 
 # デフォルトターゲット: ヘルプ表示
@@ -40,6 +41,10 @@ help:
 	@echo "ビルド"
 	@echo "  build-web         Vite ビルド"
 	@echo "  codegen-types     OpenAPI から web 型 (src/api/generated.ts) を再生成"
+	@echo ""
+	@echo "マイグレーション"
+	@echo "  migrate           alembic upgrade head"
+	@echo "  migrate-create    マイグレーション生成 (例: make migrate-create MSG=\"add user table\")"
 	@echo ""
 	@echo "クリーンアップ"
 	@echo "  clean             キャッシュ削除"
@@ -94,13 +99,13 @@ test-web:
 lint: lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index
 
 lint-backend:
-	nix develop --command bash -c "cd backend && ruff check app tests"
+	nix develop --command bash -c "cd backend && ruff check app tests alembic_migrations"
 
 # Backend 型チェック（pyright）。import 解決は devshell の python（uv2nix build 環境）を
 # --pythonpath で明示する（.venv は存在しない）。
 # バージョンは CI（.github/workflows/ci.yml）と揃えてピン留めする（drift 防止）。
 typecheck-backend:
-	nix develop --command bash -c "cd backend && uvx pyright@1.1.411 --pythonpath \"\$$(command -v python3)\" app tests"
+	nix develop --command bash -c "cd backend && uvx pyright@1.1.411 --pythonpath \"\$$(command -v python3)\" app tests alembic_migrations"
 
 lint-web:
 	nix develop --command bash -c "cd web && npm run lint"
@@ -118,7 +123,7 @@ lint-adr-index:
 	bash scripts/lint-adr-index.sh
 
 lint-fix:
-	nix develop --command bash -c "cd backend && ruff check --fix app tests"
+	nix develop --command bash -c "cd backend && ruff check --fix app tests alembic_migrations"
 	nix develop --command bash -c "cd web && npm run lint:fix"
 
 format:
@@ -141,6 +146,17 @@ build-web:
 # （CI の codegen-drift ジョブが drift を検証する）。
 codegen-types:
 	nix develop --command bash -c "set -e; cd backend && python scripts/export_openapi.py && cd ../web && node scripts/gen-types.mjs"
+
+# ------------------------------------------------------------------ #
+# マイグレーション
+# ------------------------------------------------------------------ #
+
+migrate:
+	nix develop --command bash -c "cd backend && alembic upgrade head"
+
+migrate-create:
+	@if [ -z "$(MSG)" ]; then echo "エラー: MSG を指定してください (例: make migrate-create MSG=\"add user table\")"; exit 1; fi
+	nix develop --command bash -c "cd backend && alembic revision --autogenerate -m \"$(MSG)\""
 
 # ------------------------------------------------------------------ #
 # クリーンアップ

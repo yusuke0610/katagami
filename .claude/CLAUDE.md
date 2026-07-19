@@ -25,6 +25,7 @@ Makefile は `nix develop --command bash -c "..."` でラップ済み。AI は�
 | env 名 drift 検知 | `make lint-env-keys` （`make lint` に含まれる） |
 | ADR 索引 drift 検知 | `make lint-adr-index` （`make lint` に含まれる） |
 | web 依存 lock 更新 | `make lock-web` （package.json 変更後に必須） |
+| マイグレーション | `make migrate` / `make migrate-create MSG="..."` |
 
 ### 第二選択: `nix develop --command` ラッパー
 
