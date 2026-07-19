@@ -22,6 +22,7 @@ Makefile は `nix develop --command bash -c "..."` でラップ済み。AI は�
 | Frontend lint | `make lint-web` |
 | Frontend test | `make test-web` |
 | Lint 自動修正 | `make lint-fix` |
+| ADR 索引 drift 検知 | `make lint-adr-index` （`make lint` に含まれる） |
 | web 依存 lock 更新 | `make lock-web` （package.json 変更後に必須） |
 
 ### 第二選択: `nix develop --command` ラッパー
@@ -112,6 +113,16 @@ CI 定義: `.github/workflows/ci.yml`
 - **依存 / 環境変数の追加**: 新パッケージ、env var 追加
 - **大量自動生成差分**: lockfile など、レビュー対象外として切り分けたいもの
 - **未完 / TODO**: 一部を後回しにした場合
+
+## ADR（Architecture Decision Record）
+
+技術選定・アーキテクチャ判断を行う際は必ず ADR 索引（`docs/adr/README.md`）から関連 ADR を辿り、既存の判断と矛盾しない実装を行うこと。
+
+新たに重要な技術判断を行う場合は `CONTRIBUTING.md` の ADR 運用ルールに従い、ADR を作成してから実装を開始する。**ADR の新規作成・ステータス変更をしたら、同じ PR で索引も更新する**（存在・ステータス・見出し番号の整合は `make lint-adr-index` が CI で検証する）。
+
+- ADR 索引（一覧・テーマ・決定系統の正本）: `docs/adr/README.md`
+- テンプレート: `docs/adr/0000-template.md`
+- 運用ルール: `CONTRIBUTING.md`
 
 ## モデル切り替えルール（コスト最適化）
 
