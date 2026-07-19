@@ -2,7 +2,7 @@
 	setup install-backend install-web lock-web \
 	dev-backend dev-web \
 	test test-backend test-web \
-	lint lint-backend typecheck-backend lint-web lint-adr-index lint-fix \
+	lint lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index lint-fix \
 	format format-check \
 	ci \
 	build-web \
@@ -31,6 +31,7 @@ help:
 	@echo "  lint-backend      Backend: ruff check"
 	@echo "  typecheck-backend Backend: pyright 型チェック"
 	@echo "  lint-web          Frontend: eslint"
+	@echo "  lint-env-keys     env名の SSoT drift を検知 (env_keys.py↔.env.example 双方向, リテラル参照禁止)"
 	@echo "  lint-adr-index    ADR 索引の drift を検知 (docs/adr/README.md↔ADR ファイル)"
 	@echo "  lint-fix          リント自動修正 (ruff + eslint)"
 	@echo "  format            Prettier で整形"
@@ -89,7 +90,7 @@ test-backend:
 test-web:
 	nix develop --command bash -c "cd web && npm test"
 
-lint: lint-backend typecheck-backend lint-web lint-adr-index
+lint: lint-backend typecheck-backend lint-web lint-env-keys lint-adr-index
 
 lint-backend:
 	nix develop --command bash -c "cd backend && ruff check app tests"
@@ -102,6 +103,11 @@ typecheck-backend:
 
 lint-web:
 	nix develop --command bash -c "cd web && npm run lint"
+
+# env 名の SSoT drift を検知（env_keys.py↔.env.example 双方向 + リテラル参照禁止）。
+# grep/sed/comm のみに依存するため nix wrap 不要。
+lint-env-keys:
+	bash scripts/lint-env-keys.sh
 
 # ADR 索引（docs/adr/README.md）↔ ADR ファイルの drift を検知。
 # 存在（双方向）・ステータス・見出し番号の突合。bash/grep/sed/comm のみに依存するため

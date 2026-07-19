@@ -20,9 +20,10 @@ web/vite.config.d.ts
 result
 result-*
 
-# 環境変数（秘密情報はコミットしない）
+# 環境変数（秘密情報はコミットしない。テンプレートの .env.example のみ許可）
 .env
 .env.*
+!.env.example
 
 # OS
 .DS_Store
