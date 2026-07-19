@@ -36,6 +36,10 @@ rename 時に同期忘れの事故が起きやすい。言語境界上リテラ�
 
 APP_VERSION = "APP_VERSION"
 
+# --- データベース ---
+
+DATABASE_URL = "DATABASE_URL"
+
 # --- CORS ---
 
 CORS_ORIGINS = "CORS_ORIGINS"
