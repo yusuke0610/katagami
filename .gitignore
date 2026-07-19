@@ -8,6 +8,12 @@ __pycache__/
 # ローカル SQLite（DATABASE_URL の既定値）
 *.db
 
+# 品質ゲートの生成物
+report/
+backend/mutants/
+web/reports/
+web/.stryker-tmp/
+
 # Node
 # 末尾スラッシュを付けない: Nix build への symlink（実体はディレクトリでない）も無視するため
 node_modules

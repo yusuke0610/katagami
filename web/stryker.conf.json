@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "ミューテーションテスト設定。対象は純ロジック層（utils / hooks 等の決定論的ロジック）に限定し、自動生成コード（src/api/generated.ts）・定数カタログ（constants/）・UI シェル（main.tsx / App.tsx / components）・型定義のみのファイルは対象外。週次 CI（.github/workflows/mutation.yml）で実行され、導入初期は warn-only（break: null）。本設定の mutate glob は TDD 対象スコープの正本でもある（scripts/lint-tdd.sh が参照）。TS checker は project-references + noEmit 構成のため使用しない",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vite.config.ts"
+  },
+  "mutate": [
+    "src/utils/**/*.ts",
+    "src/hooks/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.d.ts"
+  ],
+  "checkers": [],
+  "reporters": ["progress", "clear-text", "html", "json"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/mutation.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": null
+  },
+  "tempDirName": ".stryker-tmp"
+}

@@ -4,6 +4,7 @@
 
 - 本ファイルは全体ルールの索引。AI エージェント（Claude Code 含む）が最初に読むべき内容を集約している。
 - 領域固有ルール（backend / web）は `.claude/rules/<scope>/*.md` に分割済み。対象パスを編集する際に自動でロードされる。重複は避け、詳細は各 rule ファイルへ寄せる。
+- **決定論的ロジック層（mutmut / stryker のミューテーション対象）を変更する場合は TDD（red→green→refactor）が必須。** 手順の正本は `.claude/rules/common/tdd.md`。テスト差分の随伴は `make lint-tdd`（`make ci` に含まれる）が機械検証する。
 
 ## AI エージェント実行方法
 
@@ -24,8 +25,11 @@ Makefile は `nix develop --command bash -c "..."` でラップ済み。AI は�
 | Lint 自動修正 | `make lint-fix` |
 | env 名 drift 検知 | `make lint-env-keys` （`make lint` に含まれる） |
 | ADR 索引 drift 検知 | `make lint-adr-index` （`make lint` に含まれる） |
+| TDD 随伴検知 | `make lint-tdd` （`make lint` に含まれる） |
 | web 依存 lock 更新 | `make lock-web` （package.json 変更後に必須） |
 | マイグレーション | `make migrate` / `make migrate-create MSG="..."` |
+| コード重複検知 | `make dupe-check` （結果: `report/dupe/`。warn-only） |
+| ミューテーションテスト | `make mutation-backend` / `make mutation-web` （**長時間**。週次 CI で実行） |
 
 ### 第二選択: `nix develop --command` ラッパー
 

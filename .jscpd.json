@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/kucherenko/jscpd/master/packages/jscpd/schema.json",
+  "threshold": 100,
+  "minTokens": 50,
+  "minLines": 5,
+  "maxLines": 1000,
+  "maxSize": "100kb",
+  "absolute": true,
+  "gitignore": true,
+  "format": [
+    "python",
+    "typescript",
+    "tsx",
+    "javascript",
+    "jsx",
+    "nix",
+    "markdown",
+    "yaml"
+  ],
+  "path": [
+    "backend/app",
+    "backend/tests",
+    "web/src",
+    "docs",
+    ".claude",
+    "scripts",
+    "README.md",
+    "flake.nix",
+    "Makefile"
+  ],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/__pycache__/**",
+    "backend/alembic_migrations/versions/**",
+    "web/src/api/generated.ts",
+    "web/src/**/*.test.{ts,tsx}",
+    "report/**",
+    "**/*.lock",
+    "**/*.snap"
+  ],
+  "reporters": ["json", "html", "markdown", "consoleFull"],
+  "output": "report/dupe",
+  "blame": false,
+  "silent": false,
+  "verbose": false
+}

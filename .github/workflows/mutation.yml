@@ -1,0 +1,103 @@
+name: Mutation Tests
+
+# ミューテーションテスト（テストの検出力の可視化）。
+# フル実行が長時間かかるため通常 CI（ci.yml）には組み込まず、週次 schedule と
+# 手動実行（workflow_dispatch）のみとする。結果は warn-only（fail させない）で、
+# レポートを artifact として保存する。通知（Slack 等）は導入時に本 workflow へ追加する。
+
+on:
+  schedule:
+    # 月曜 3:00 JST（日曜 18:00 UTC）
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Backend: mutmut（対象: backend/pyproject.toml の [tool.mutmut] を参照）
+  mutation-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          github_access_token: ${{ github.token }}
+
+      - name: Cache Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-devshell-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'backend/pyproject.toml', 'backend/uv.lock', 'web/package.json', 'web/package-lock.json') }}
+          restore-prefixes-first-match: nix-devshell-${{ runner.os }}-
+
+      - name: Build devshell
+        run: nix develop --command true
+
+      # 生存ミュータントがあっても集計は行うため continue-on-error にする
+      - name: Run mutmut
+        continue-on-error: true
+        run: nix develop --command bash -c "cd backend && python -m mutmut run" 2>&1 | tee backend/mutmut-run.log
+
+      - name: Collect results
+        continue-on-error: true
+        run: nix develop --command bash -c "cd backend && python -m mutmut results" > backend/mutmut-results.txt
+
+      - name: Upload mutmut report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: mutmut-report
+          path: |
+            backend/mutmut-run.log
+            backend/mutmut-results.txt
+          retention-days: 30
+
+  # Frontend: Stryker（対象: web/stryker.conf.json の mutate を参照）
+  mutation-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          github_access_token: ${{ github.token }}
+
+      - name: Cache Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-devshell-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'backend/pyproject.toml', 'backend/uv.lock', 'web/package.json', 'web/package-lock.json') }}
+          restore-prefixes-first-match: nix-devshell-${{ runner.os }}-
+
+      - name: Build devshell
+        run: nix develop --command true
+
+      # 生存ミュータントがあっても集計は行うため continue-on-error にする。
+      # .stryker-tmp はプロジェクト側に書かれる（node_modules は read-only のため）
+      - name: Run Stryker
+        continue-on-error: true
+        run: nix develop --command bash -c "cd web && npm run test:mutation"
+
+      - name: Upload Stryker report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: stryker-report
+          path: web/reports/mutation/
+          retention-days: 30

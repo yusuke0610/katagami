@@ -6,6 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from app.core import env_keys
 from app.db import get_db
 from sqlalchemy import text
@@ -25,6 +26,11 @@ def test_get_db_yields_working_session() -> None:
 
 def test_alembic_upgrade_head_applies_baseline() -> None:
     """alembic upgrade head が DATABASE_URL の DB に適用できる（env.py の配線検証）。"""
+    # mutmut は source_paths（app）と tests のみを mutants/ へコピーするため、
+    # alembic.ini が無い環境（ミューテーション実行時）では検証対象外としてスキップする
+    if not (_BACKEND_DIR / "alembic.ini").exists():
+        pytest.skip("alembic.ini が無い環境（mutants/ 等）ではスキップ")
+
     with tempfile.TemporaryDirectory(prefix="katagami-alembic-") as tmp_dir:
         db_path = Path(tmp_dir) / "migrate.db"
         env = {**os.environ, env_keys.DATABASE_URL: f"sqlite:///{db_path}"}
