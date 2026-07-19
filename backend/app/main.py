@@ -13,6 +13,7 @@ from app.core.errors import (
     generate_error_id,
     normalize_http_exception_detail,
 )
+from app.schemas.health import HealthResponse
 
 logger = logging.getLogger(__name__)
 
@@ -96,5 +97,5 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "version": os.getenv(env_keys.APP_VERSION, "dev")}
+def health() -> HealthResponse:
+    return HealthResponse(status="ok", version=os.getenv(env_keys.APP_VERSION, "dev"))

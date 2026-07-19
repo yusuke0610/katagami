@@ -128,3 +128,42 @@ jobs:
 
       - name: Run backend tests
         run: make test-backend
+
+  # OpenAPI → TypeScript 型生成の drift 検知（型契約）。
+  # backend の Pydantic / ルーター定義（正本）を変えたのに web/src/api/generated.ts を
+  # 再生成し忘れた PR を止める。再生成はローカルと同一の make codegen-types を呼ぶ
+  # （コマンドの SSoT は Makefile）。
+  codegen-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          # 型生成のドリフト検知のみで push はしないため認証情報は保持しない
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          github_access_token: ${{ github.token }}
+
+      - name: Cache Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-devshell-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'backend/pyproject.toml', 'backend/uv.lock', 'web/package.json', 'web/package-lock.json') }}
+          restore-prefixes-first-match: nix-devshell-${{ runner.os }}-
+
+      - name: Build devshell
+        run: nix develop --command true
+
+      - name: OpenAPI → TypeScript 型を再生成
+        run: make codegen-types
+
+      - name: Check generated types drift
+        run: |
+          if ! git diff --exit-code web/src/api/generated.ts; then
+            echo "::error::web/src/api/generated.ts が最新ではありません。'make codegen-types' を実行して再生成し、コミットしてください。"
+            exit 1
+          fi
