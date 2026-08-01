@@ -12,6 +12,7 @@
 |---|---|---|---|
 | [ADR-0001](./0001-nix-managed-toolchain.md) | 開発環境と依存を Nix flake で一元管理する（uv2nix + importNpmLock） | 開発プロセス / 品質 | toolchain・Python 依存・node_modules を lock 正本の Nix build に統一し、ローカル / CI の drift を排除 |
 | [ADR-0002](./0002-template-generator-cli.md) | テンプレート生成 CLI を Nix flake app として配布する | 開発プロセス / 品質 | `nix run .#new` で新プロジェクトを生成。プレースホルダを埋め込まずアプリ名の一括置換方式でテンプレートの実行可能性を維持 |
+| [ADR-0003](./0003-strip-template-meta-on-generate.md) | 生成プロジェクトからテンプレート固有物とサンプルドメインを除去する | 開発プロセス / 品質 | 生成 CLI 自身・テンプレートについての ADR / README・サンプルドメイン Note を生成時に機械除去。アンカー不一致は即 fail |
 
 ## 全 ADR 一覧
 
@@ -20,4 +21,5 @@
 | No. | タイトル | ステータス | テーマ | 置き換え・関連 |
 |---|---|---|---|---|
 | [ADR-0001](./0001-nix-managed-toolchain.md) | 開発環境と依存を Nix flake で一元管理する（uv2nix + importNpmLock） | Accepted | 開発プロセス / 品質 | — |
-| [ADR-0002](./0002-template-generator-cli.md) | テンプレート生成 CLI を Nix flake app として配布する | Accepted | 開発プロセス / 品質 | 関連: 0001（Nix 一元化の前提を共有） |
+| [ADR-0002](./0002-template-generator-cli.md) | テンプレート生成 CLI を Nix flake app として配布する | Accepted | 開発プロセス / 品質 | 関連: 0001（Nix 一元化の前提を共有）、0003（生成物の内容契約） |
+| [ADR-0003](./0003-strip-template-meta-on-generate.md) | 生成プロジェクトからテンプレート固有物とサンプルドメインを除去する | Accepted | 開発プロセス / 品質 | 関連: 0002（生成方式を前提に、生成物の内容を定める） |

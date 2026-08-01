@@ -214,14 +214,45 @@ jobs:
         working-directory: ${{ runner.temp }}/smoke-sample
         run: nix develop --command true
 
-      # 生成直後のリポジトリで SSoT lint（lint-tdd は origin 未設定 skip の経路）と
-      # backend / web テストが通ることを確認する
-      - name: Run gates in generated project
+      # 生成時に除去されるべきもの（ADR-0003）が残っていないことを確認する
+      - name: Verify template-only artifacts are stripped
         working-directory: ${{ runner.temp }}/smoke-sample
         run: |
-          make lint-env-keys lint-adr-index lint-tdd
-          make test-backend
-          make test-web
+          stale=0
+          for p in scripts/new-project.sh scripts/strip-template-meta.sh \
+                   docs/adr/0002-template-generator-cli.md \
+                   docs/adr/0003-strip-template-meta-on-generate.md \
+                   backend/app/models/note.py backend/app/schemas/note.py \
+                   backend/app/routers/notes.py backend/app/services/notes \
+                   web/src/api/notes.ts; do
+            if [ -e "$p" ]; then
+              echo "::error::生成物に $p が残っています"
+              stale=1
+            fi
+          done
+          if grep -rIq --exclude-dir=.git -i "note" backend/app web/src; then
+            echo "::error::生成物のソースにサンプルドメイン（Note）の参照が残っています"
+            grep -rIln --exclude-dir=.git -i "note" backend/app web/src
+            stale=1
+          fi
+          exit $stale
+
+      # 生成直後のリポジトリで全ゲート（lint / typecheck / test / build）が通ることを
+      # 確認する。lint-tdd は origin 未設定 skip の経路を通る
+      - name: Run gates in generated project
+        working-directory: ${{ runner.temp }}/smoke-sample
+        run: make ci
+
+      # 除去した生成型（generated.ts）が実際の再生成結果と一致することを検証する。
+      # ADR-0003 の除去はテキスト処理のため、真の codegen 出力との一致をここで担保する
+      - name: Verify codegen output in generated project
+        working-directory: ${{ runner.temp }}/smoke-sample
+        run: |
+          make codegen-types
+          if ! git diff --exit-code web/src/api/generated.ts; then
+            echo "::error::生成物の generated.ts が codegen 結果と一致しません（strip-template-meta.sh の追従漏れ）"
+            exit 1
+          fi
 
   # コード重複検知（jscpd）。導入初期は warn-only（threshold=100 / continue-on-error）。
   # baseline 取得後に閾値を絞り fail 化する予定。

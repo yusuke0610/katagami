@@ -11,6 +11,9 @@
 #   常に実行可能（make ci green）なまま維持される。
 #   lock ファイル（uv.lock / package-lock.json）内の名前も同時に置換されるため、
 #   生成直後から CI の lock drift 検証が green になる。
+#   置換の前段で scripts/strip-template-meta.sh が走り、テンプレート固有物
+#   （生成 CLI 自身・テンプレートについての ADR / README）とサンプルドメイン Note を
+#   除去する（ADR-0003）。
 #
 # 注意:
 #   sed は GNU sed（gnused）前提。flake app 経由の実行では Nix が供給する。
@@ -114,6 +117,10 @@ tar -C "$TEMPLATE_ROOT" -cf - \
 # 展開後に書き込み権限を戻す
 chmod -R u+w "$target"
 
+# ── テンプレート固有物・サンプルドメインの除去（ADR-0003） ───────────────────
+# アプリ名置換より前に実行する（除去側のアンカーはテンプレート原文で書ける）。
+bash "$TEMPLATE_ROOT/scripts/strip-template-meta.sh" "$target"
+
 # ── アプリ名の一括置換（ファイル内容） ───────────────────────────────────────
 # -I でバイナリを除外する。置換後に TEMPLATE_TOKEN が残らないことを最後に検証する。
 grep -rIl --exclude-dir=.git "$TEMPLATE_TOKEN" "$target" | while IFS= read -r file; do
@@ -149,7 +156,7 @@ ${app_name} を生成しました: $target
   make ci            # 全ゲートが green であることを確認
 
 プロダクト固有化のポイント:
-  - サンプルドメイン（Note）の置き換え: README「サンプルドメイン」節を参照
   - infra/environments/*/backend.tf の tfstate バケット名と terraform.tfvars.example
   - docs/adr/: ADR-0001（Nix 一元管理）は生成後も有効。以降の判断は自プロジェクトで起票
+  - .claude/CLAUDE.md: コミット / PR フロー・モデル切り替え等の運用ルールは各自で調整
 DONE

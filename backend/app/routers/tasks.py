@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import ErrorCode, raise_app_error
 from app.db import get_db
 from app.models.task import AsyncTask
-from app.schemas.note import TaskStatusResponse
+from app.schemas.task import TaskStatusResponse
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 

@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import ErrorCode, raise_app_error
 from app.db import get_db
 from app.models.note import Note
-from app.schemas.note import NoteCreate, NoteResponse, NoteUpdate, TaskAccepted
+from app.schemas.note import NoteCreate, NoteResponse, NoteUpdate
+from app.schemas.task import TaskAccepted
 from app.services.tasks.dispatch_service import create_and_dispatch_task
 from app.services.tasks.local import LocalDispatcher
 
